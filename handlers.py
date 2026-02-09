@@ -235,9 +235,13 @@ class Handlers:
                 day_items = by_day[day_num]
                 if day_items:
                     day_name = day_items[0].get('день_недели', '')
-                    lines.append(f"\n{'━' * 40}")
-                    lines.append(f"<b>{day_name}</b>")
-                    lines.append(f"{'━' * 28}")
+                    # Убираем эмодзи календаря если оно есть в названии дня
+                    if day_name.startswith('📅 '):
+                        day_name = day_name[2:]
+                    # Убираем дату из названия дня (например, "Понедельник 17" -> "Понедельник")
+                    import re
+                    day_name = re.sub(r'\s+\d+$', '', day_name).strip()
+                    lines.append(f"\n<b>{day_name}</b>")
                     for idx, item in enumerate(day_items):
                         lines.append(self._format_item(item, is_teacher, idx + 1))
                         # Пустая строка между парами
@@ -249,7 +253,6 @@ class Handlers:
                 lines.append(f"<b>Сегодня</b>")
             elif period == "tomorrow":
                 lines.append(f"<b>Завтра</b>")
-            lines.append(f"{'━' * 28}")
             
             for idx, item in enumerate(filtered_items):
                 lines.append(self._format_item(item, is_teacher, idx + 1))
