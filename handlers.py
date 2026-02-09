@@ -237,30 +237,30 @@ class Handlers:
                     day_name = day_items[0].get('день_недели', '')
                     lines.append(f"\n{'━' * 40}")
                     lines.append(f"<b>📅 {day_name}</b>")
-                    lines.append(f"{'━' * 40}")
+                    lines.append(f"{'━' * 28}")
                     for idx, item in enumerate(day_items):
                         lines.append(self._format_item(item, is_teacher, idx + 1))
-                        # Добавляем разделитель между занятиями, кроме последнего
+                        # Пустая строка между парами
                         if idx < len(day_items) - 1:
-                            lines.append("   " + "─" * 35)
+                            lines.append("")
         else:
             # Для сегодня/завтра добавляем заголовок
             if period == "today":
                 lines.append(f"<b>📅 Сегодня</b>")
             elif period == "tomorrow":
                 lines.append(f"<b>📅 Завтра</b>")
-            lines.append(f"{'━' * 40}")
+            lines.append(f"{'━' * 28}")
             
             for idx, item in enumerate(filtered_items):
                 lines.append(self._format_item(item, is_teacher, idx + 1))
-                # Добавляем разделитель между занятиями, кроме последнего
+                # Пустая строка между парами
                 if idx < len(filtered_items) - 1:
-                    lines.append("   " + "─" * 35)
+                    lines.append("")
         
         return "\n".join(lines), "HTML"
     
     def _format_item(self, item: dict, is_teacher: bool, number: int = 0) -> str:
-        """Форматирование одного занятия с красивым HTML оформлением"""
+        """Форматирование одного занятия (компактно и читабельно)"""
         from utils import get_lecture_icon
         
         discipline = item.get('дисциплина', '')
@@ -277,34 +277,32 @@ class Handlers:
         end = item.get('конец', '')
         audience = item.get('аудитория', '')
         
-        # Красивое форматирование с HTML и эмодзи
-        number_prefix = f"<b>{number}.</b> " if number > 0 else ""
+        # Красивое, но компактное форматирование
+        number_prefix = f"{number}) " if number > 0 else ""
         
-        # Определяем цветовую тему в зависимости от типа занятия
+        # Подбираем иконку-карточку по типу
         discipline_lower = discipline.lower()
         if discipline_lower.startswith('лек'):
             card_emoji = "📘"
-            type_name = "Лекция"
         elif discipline_lower.startswith('лаб'):
             card_emoji = "🔬"
-            type_name = "Лабораторная"
         elif discipline_lower.startswith('пр'):
             card_emoji = "📝"
-            type_name = "Практика"
         else:
             card_emoji = "📚"
-            type_name = "Занятие"
         
-        # Форматируем как красивую карточку с визуальным разделением
-        lines = [
-            f"",
-            f"▫️ {card_emoji} {number_prefix}<b>{discipline}</b>",
-            f"   {icon} <i>{type_name}</i>",
-            f"",
-            f"   {teacher_part}",
-            f"   🕒 <code>{start} / {end}</code>",
-            f"   📍 <i>{audience}</i>",
-            f""
-        ]
+        # Итоговый компактный блок:
+        # 1) 🟢 Математический анализ
+        #    👤 Пашков Г.Г.
+        #    🕒 12:30–14:05 • 📍 226 (поток)
+        line1 = f"{number_prefix}{icon} <b>{discipline}</b>"
+        if card_emoji:
+            line1 = f"{card_emoji} {line1}"
         
-        return "\n".join(lines)
+        line2 = f"{teacher_part}"
+        time_part = f"{start}–{end}" if start and end else f"{start or end}"
+        line3 = f"🕒 <code>{time_part}</code>"
+        if audience:
+            line3 += f" • 📍 <i>{audience}</i>"
+        
+        return "\n".join([line1, line2, line3])
