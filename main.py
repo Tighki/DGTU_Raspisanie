@@ -16,22 +16,26 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Подавляем предупреждения о CancelledError (это нормальное поведение для updater.idle())
-logging.getLogger('telegram.ext.Application').setLevel(logging.ERROR)
+# Настройка уровня логирования для telegram
+logging.getLogger('telegram').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
 
 async def main():
     """Главная функция запуска бота"""
-    config = Config()
-    
-    if not config.bot_token:
-        logger.error("BOT_TOKEN не установлен! Установите переменную окружения BOT_TOKEN")
-        return
-    
-    bot = TelegramBot(config)
-    await bot.start()
+    try:
+        config = Config()
+        
+        if not config.bot_token:
+            logger.error("BOT_TOKEN не установлен! Установите переменную окружения BOT_TOKEN")
+            return
+        
+        bot = TelegramBot(config)
+        await bot.start()
+    except Exception as e:
+        logger.error(f"Ошибка запуска бота: {e}", exc_info=True)
 
 
 if __name__ == '__main__':

@@ -65,18 +65,29 @@ class TelegramBot:
     
     async def start(self):
         """Запуск бота"""
+        import asyncio
+        
         logger.info("Запуск бота...")
         try:
+            # Инициализация и запуск polling
             await self.application.initialize()
             await self.application.start()
-            await self.application.updater.start_polling()
+            await self.application.updater.start_polling(
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True
+            )
             logger.info("Бот запущен и готов к работе!")
             
-            # Бот работает до получения сигнала остановки
-            # Используем updater.idle() для постоянной работы
-            await self.application.updater.idle()
+            # Ожидание бесконечно (до получения сигнала остановки)
+            # Используем бесконечный цикл с проверкой каждую секунду
+            try:
+                while True:
+                    await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                logger.info("Получен сигнал отмены")
+            
         except KeyboardInterrupt:
-            logger.info("Получен сигнал остановки (Ctrl+C)")
+            logger.info("Получен сигнал остановки (KeyboardInterrupt)")
         except Exception as e:
             logger.error(f"Критическая ошибка: {e}", exc_info=True)
         finally:
