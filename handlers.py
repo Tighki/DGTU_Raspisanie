@@ -236,7 +236,7 @@ class Handlers:
                 if day_items:
                     day_name = day_items[0].get('день_недели', '')
                     lines.append(f"\n{'━' * 40}")
-                    lines.append(f"<b>📅 {day_name}</b>")
+                    lines.append(f"<b>{day_name}</b>")
                     lines.append(f"{'━' * 28}")
                     for idx, item in enumerate(day_items):
                         lines.append(self._format_item(item, is_teacher, idx + 1))
@@ -246,9 +246,9 @@ class Handlers:
         else:
             # Для сегодня/завтра добавляем заголовок
             if period == "today":
-                lines.append(f"<b>📅 Сегодня</b>")
+                lines.append(f"<b>Сегодня</b>")
             elif period == "tomorrow":
-                lines.append(f"<b>📅 Завтра</b>")
+                lines.append(f"<b>Завтра</b>")
             lines.append(f"{'━' * 28}")
             
             for idx, item in enumerate(filtered_items):
@@ -276,8 +276,7 @@ class Handlers:
         start = item.get('начало', '')
         end = item.get('конец', '')
         audience = item.get('аудитория', '')
-        
-        # Красивое, но компактное форматирование
+
         number_prefix = f"{number}) " if number > 0 else ""
         
         # Подбираем иконку-карточку по типу
@@ -291,10 +290,6 @@ class Handlers:
         else:
             card_emoji = "📚"
         
-        # Итоговый компактный блок:
-        # 1) 🟢 Математический анализ
-        #    👤 Пашков Г.Г.
-        #    🕒 12:30–14:05 • 📍 226 (поток)
         line1 = f"{number_prefix}{icon} <b>{discipline}</b>"
         if card_emoji:
             line1 = f"{card_emoji} {line1}"
