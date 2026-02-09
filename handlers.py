@@ -241,11 +241,12 @@ class Handlers:
                     # Убираем дату из названия дня (например, "Понедельник 17" -> "Понедельник")
                     import re
                     day_name = re.sub(r'\s+\d+$', '', day_name).strip()
-                    lines.append(f"\n<b>{day_name}</b>")
+                    lines.append(f"\n<b>{day_name}</b>\n")
                     for idx, item in enumerate(day_items):
                         lines.append(self._format_item(item, is_teacher, idx + 1))
-                        # Пустая строка между парами
+                        # Две пустые строки между парами для лучшей читаемости
                         if idx < len(day_items) - 1:
+                            lines.append("")
                             lines.append("")
         else:
             # Для сегодня/завтра добавляем заголовок
@@ -256,8 +257,9 @@ class Handlers:
             
             for idx, item in enumerate(filtered_items):
                 lines.append(self._format_item(item, is_teacher, idx + 1))
-                # Пустая строка между парами
+                # Две пустые строки между парами для лучшей читаемости
                 if idx < len(filtered_items) - 1:
+                    lines.append("")
                     lines.append("")
         
         return "\n".join(lines), "HTML"
@@ -280,27 +282,37 @@ class Handlers:
         end = item.get('конец', '')
         audience = item.get('аудитория', '')
 
-        number_prefix = f"{number}) " if number > 0 else ""
+        # Улучшенное форматирование: убираем дублирование иконок
+        number_prefix = f"<b>{number}.</b> " if number > 0 else ""
         
-        # Подбираем иконку-карточку по типу
+        # Определяем тип занятия и выбираем одну иконку
         discipline_lower = discipline.lower()
         if discipline_lower.startswith('лек'):
-            card_emoji = "📘"
+            type_emoji = "🟢"
+            type_text = "лек"
         elif discipline_lower.startswith('лаб'):
-            card_emoji = "🔬"
+            type_emoji = "🔬"
+            type_text = "лаб"
         elif discipline_lower.startswith('пр'):
-            card_emoji = "📝"
+            type_emoji = "📚"
+            type_text = "пр"
         else:
-            card_emoji = "📚"
+            type_emoji = icon
+            type_text = ""
         
-        line1 = f"{number_prefix}{icon} <b>{discipline}</b>"
-        if card_emoji:
-            line1 = f"{card_emoji} {line1}"
+        # Компактный формат: номер, иконка типа, название предмета
+        line1 = f"{number_prefix}{type_emoji} <b>{discipline}</b>"
         
-        line2 = f"{teacher_part}"
+        # Вторая строка: преподаватель и время в одной строке
         time_part = f"{start}–{end}" if start and end else f"{start or end}"
-        line3 = f"🕒 <code>{time_part}</code>"
-        if audience:
-            line3 += f" • 📍 <i>{audience}</i>"
+        line2 = f"{teacher_part}  🕒 <code>{time_part}</code>"
         
-        return "\n".join([line1, line2, line3])
+        # Третья строка: только аудитория
+        line3 = f"📍 <i>{audience}</i>" if audience else ""
+        
+        # Объединяем строки, убирая пустые
+        lines = [line1, line2]
+        if line3:
+            lines.append(line3)
+        
+        return "\n".join(lines)
