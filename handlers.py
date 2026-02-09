@@ -29,27 +29,28 @@ class Handlers:
     
     async def login_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик кнопки авторизации"""
-        inline_keyboard, _, _ = get_login_options()
-        text = localize("ChooseUniversity", {})
-        await update.message.reply_text(text, reply_markup=inline_keyboard)
+        user = update.effective_user
+        
+        # Автоматически устанавливаем ПИ ДГТУ
+        self.storage.set(str(user.id), "T")
+        
+        # Устанавливаем состояние ожидания логина
+        self.storage.set(f"{user.id}:login_state", "waiting_login")
+        self.storage.set(f"{user.id}:login_university", "T")
+        
+        text = localize("LoginHandler", {})
+        await update.message.reply_text(text)
     
     async def login_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик команды /l или /login - начинает процесс авторизации"""
         user = update.effective_user
         
-        # Получаем тип университета из хранилища
-        user_university = self.storage.get(str(user.id)) or ""
-        
-        if not user_university:
-            # Если университет не выбран, показываем выбор
-            inline_keyboard, _, _ = get_login_options()
-            text = localize("ChooseUniversity", {})
-            await update.message.reply_text(text, reply_markup=inline_keyboard)
-            return
+        # Автоматически устанавливаем ПИ ДГТУ
+        self.storage.set(str(user.id), "T")
         
         # Устанавливаем состояние ожидания логина
         self.storage.set(f"{user.id}:login_state", "waiting_login")
-        self.storage.set(f"{user.id}:login_university", user_university)
+        self.storage.set(f"{user.id}:login_university", "T")
         
         text = localize("LoginHandler", {})
         await update.message.reply_text(text)

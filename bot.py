@@ -34,7 +34,7 @@ class TelegramBot:
     
     def _register_handlers(self):
         """Регистрация всех обработчиков команд и сообщений"""
-        from menu import get_main_menu, get_login_menu, get_login_options
+        from menu import get_main_menu, get_login_menu
         
         # Команды
         self.application.add_handler(CommandHandler("start", self.handlers.start_handler))
@@ -44,7 +44,6 @@ class TelegramBot:
         # Кнопки меню
         menu = get_main_menu()
         login_menu = get_login_menu()
-        login_options, btn_tpi, btn_dgty = get_login_options()
         
         self.application.add_handler(MessageHandler(filters.Regex("^📖 Сегодня$"), self.handlers.today_handler))
         self.application.add_handler(MessageHandler(filters.Regex("^📖 Завтра$"), self.handlers.tomorrow_handler))
@@ -52,16 +51,6 @@ class TelegramBot:
         self.application.add_handler(MessageHandler(filters.Regex("^ℹ Помощь$"), self.handlers.help_handler))
         self.application.add_handler(MessageHandler(filters.Regex("^🔑 Авторизация$"), self.handlers.login_handler))
         self.application.add_handler(MessageHandler(filters.Regex("^🚪 Выход$"), self.handlers.logout_handler))
-        
-        # Inline кнопки выбора университета
-        self.application.add_handler(CallbackQueryHandler(
-            self.handlers.inline_tpi_handler,
-            pattern="^tpi$"
-        ))
-        self.application.add_handler(CallbackQueryHandler(
-            self.handlers.inline_dgty_handler,
-            pattern="^dgty$"
-        ))
         
         # Обработчик текстовых сообщений для пошаговой авторизации (должен быть последним)
         # Используем фильтр, чтобы не перехватывать команды и кнопки меню
