@@ -9,7 +9,7 @@ def get_main_menu() -> ReplyKeyboardMarkup:
     keyboard = [
         ["📖 Сегодня", "📖 Завтра"],
         ["📖 Неделя", "ℹ Помощь"],
-        ["🧹 Очистить чат", "🚪 Выход"],
+        ["🚪 Выход"]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 

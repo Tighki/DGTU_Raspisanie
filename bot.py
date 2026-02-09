@@ -50,7 +50,6 @@ class TelegramBot:
         self.application.add_handler(MessageHandler(filters.Regex("^📖 Завтра$"), self.handlers.tomorrow_handler))
         self.application.add_handler(MessageHandler(filters.Regex("^📖 Неделя$"), self.handlers.week_handler))
         self.application.add_handler(MessageHandler(filters.Regex("^ℹ Помощь$"), self.handlers.help_handler))
-        self.application.add_handler(MessageHandler(filters.Regex("^🧹 Очистить чат$"), self.handlers.clear_chat_handler))
         self.application.add_handler(MessageHandler(filters.Regex("^🔑 Авторизация$"), self.handlers.login_handler))
         self.application.add_handler(MessageHandler(filters.Regex("^🚪 Выход$"), self.handlers.logout_handler))
         
@@ -67,10 +66,8 @@ class TelegramBot:
         # Обработчик текстовых сообщений для пошаговой авторизации (должен быть последним)
         # Используем фильтр, чтобы не перехватывать команды и кнопки меню
         self.application.add_handler(MessageHandler(
-            filters.TEXT
-            & ~filters.COMMAND
-            & ~filters.Regex("^(📖 Сегодня|📖 Завтра|📖 Неделя|ℹ Помощь|🧹 Очистить чат|🔑 Авторизация|🚪 Выход)$"),
-            self.handlers.text_message_handler,
+            filters.TEXT & ~filters.COMMAND & ~filters.Regex("^(📖 Сегодня|📖 Завтра|📖 Неделя|ℹ Помощь|🔑 Авторизация|🚪 Выход)$"),
+            self.handlers.text_message_handler
         ))
     
     async def start(self):
