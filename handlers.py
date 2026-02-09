@@ -140,23 +140,23 @@ class Handlers:
         
         try:
             timetable = self.api.get_timetable(storage_value)
-            text = self._format_timetable(timetable, storage_value, period)
+            text, parse_mode = self._format_timetable(timetable, storage_value, period)
             
             if not text or text.strip() == "":
                 await update.message.reply_text(localize("TimetableEmpty", {}))
             else:
-                await update.message.reply_text(text)
+                await update.message.reply_text(text, parse_mode=parse_mode)
         except Exception as e:
             logger.error(f"Ошибка получения расписания: {e}")
             await update.message.reply_text(localize("TryLaterError", {}))
     
-    def _format_timetable(self, timetable: dict, storage_value: str, period: str) -> str:
-        """Форматирование расписания для отправки"""
+    def _format_timetable(self, timetable: dict, storage_value: str, period: str):
+        """Форматирование расписания для отправки с HTML разметкой"""
         from datetime import datetime
         from constants import get_current_date, get_tomorrow_date
         
         if not timetable or 'data' not in timetable or 'rasp' not in timetable['data']:
-            return ""
+            return "", None
         
         items = timetable['data']['rasp']
         is_teacher = storage_value.endswith('T')
@@ -172,9 +172,9 @@ class Handlers:
             filtered_items = items
         
         if not filtered_items:
-            return ""
+            return "", None
         
-        # Форматирование
+        # Форматирование с HTML
         lines = []
         if period == "week":
             # Группировка по дням недели
@@ -189,17 +189,32 @@ class Handlers:
                 day_items = by_day[day_num]
                 if day_items:
                     day_name = day_items[0].get('день_недели', '')
-                    lines.append(f"\n{day_name}")
-                    for item in day_items:
-                        lines.append(self._format_item(item, is_teacher))
+                    lines.append(f"\n{'━' * 40}")
+                    lines.append(f"<b>📅 {day_name}</b>")
+                    lines.append(f"{'━' * 40}")
+                    for idx, item in enumerate(day_items):
+                        lines.append(self._format_item(item, is_teacher, idx + 1))
+                        # Добавляем разделитель между занятиями, кроме последнего
+                        if idx < len(day_items) - 1:
+                            lines.append("   " + "─" * 35)
         else:
-            for item in filtered_items:
-                lines.append(self._format_item(item, is_teacher))
+            # Для сегодня/завтра добавляем заголовок
+            if period == "today":
+                lines.append(f"<b>📅 Сегодня</b>")
+            elif period == "tomorrow":
+                lines.append(f"<b>📅 Завтра</b>")
+            lines.append(f"{'━' * 40}")
+            
+            for idx, item in enumerate(filtered_items):
+                lines.append(self._format_item(item, is_teacher, idx + 1))
+                # Добавляем разделитель между занятиями, кроме последнего
+                if idx < len(filtered_items) - 1:
+                    lines.append("   " + "─" * 35)
         
-        return "\n".join(lines)
+        return "\n".join(lines), "HTML"
     
-    def _format_item(self, item: dict, is_teacher: bool) -> str:
-        """Форматирование одного занятия"""
+    def _format_item(self, item: dict, is_teacher: bool, number: int = 0) -> str:
+        """Форматирование одного занятия с красивым HTML оформлением"""
         from utils import get_lecture_icon
         
         discipline = item.get('дисциплина', '')
@@ -207,13 +222,43 @@ class Handlers:
         
         if is_teacher:
             group = item.get('группа', '')
-            teacher_part = f"👤 {group}"
+            teacher_part = f"👤 <b>{group}</b>"
         else:
             teacher = item.get('преподаватель', '')
-            teacher_part = f"👤 {teacher}"
+            teacher_part = f"👤 <b>{teacher}</b>"
         
         start = item.get('начало', '')
         end = item.get('конец', '')
         audience = item.get('аудитория', '')
         
-        return f"{teacher_part}\n{icon} {discipline}\n🕒 {start} / {end}\n📍 Аудитория: {audience}"
+        # Красивое форматирование с HTML и эмодзи
+        number_prefix = f"<b>{number}.</b> " if number > 0 else ""
+        
+        # Определяем цветовую тему в зависимости от типа занятия
+        discipline_lower = discipline.lower()
+        if discipline_lower.startswith('лек'):
+            card_emoji = "📘"
+            type_name = "Лекция"
+        elif discipline_lower.startswith('лаб'):
+            card_emoji = "🔬"
+            type_name = "Лабораторная"
+        elif discipline_lower.startswith('пр'):
+            card_emoji = "📝"
+            type_name = "Практика"
+        else:
+            card_emoji = "📚"
+            type_name = "Занятие"
+        
+        # Форматируем как красивую карточку с визуальным разделением
+        lines = [
+            f"",
+            f"▫️ {card_emoji} {number_prefix}<b>{discipline}</b>",
+            f"   {icon} <i>{type_name}</i>",
+            f"",
+            f"   {teacher_part}",
+            f"   🕒 <code>{start} / {end}</code>",
+            f"   📍 <i>{audience}</i>",
+            f""
+        ]
+        
+        return "\n".join(lines)
