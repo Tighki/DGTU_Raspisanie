@@ -1,6 +1,6 @@
 """
 Модуль для работы с хранилищем данных
-Поддерживает: memory, sqlite, redis
+Поддерживает: memory, sqlite, redis, mongo
 """
 import logging
 from typing import Optional
@@ -113,12 +113,53 @@ class RedisStorage(Storage):
         self.client.delete(key)
 
 
+class MongoStorage(Storage):
+    """MongoDB хранилище"""
+
+    def __init__(self, uri: str, db_name: str, collection_name: str):
+        try:
+            from pymongo import MongoClient, errors  # type: ignore
+
+            self.client = MongoClient(uri)
+            # Лёгкая проверка подключения
+            self.client.admin.command("ping")
+
+            self.db = self.client[db_name]
+            self.collection = self.db[collection_name]
+
+            # Индекс по _id создаётся автоматически, но лог для ясности
+            logger.info(f"Используется MongoDB хранилище: {uri}, db={db_name}, collection={collection_name}")
+        except ImportError:
+            raise ImportError("Для использования MongoDB установите: pip install pymongo")
+        except Exception as e:
+            raise ConnectionError(f"Не удалось подключиться к MongoDB: {e}")
+
+    def get(self, key: str) -> Optional[str]:
+        doc = self.collection.find_one({"_id": key})
+        if not doc:
+            return None
+        # Храним строку в поле value
+        return doc.get("value")
+
+    def set(self, key: str, value: str) -> None:
+        self.collection.update_one(
+            {"_id": key},
+            {"$set": {"value": value}},
+            upsert=True,
+        )
+
+    def delete(self, key: str) -> None:
+        self.collection.delete_one({"_id": key})
+
+
 def get_storage(config: Config) -> Storage:
     """Фабрика для создания хранилища в зависимости от типа"""
     storage_type = config.storage_type.lower()
     
     if storage_type == 'redis':
         return RedisStorage(config.redis_host, config.redis_port)
+    elif storage_type == 'mongo':
+        return MongoStorage(config.mongo_uri, config.mongo_db, config.mongo_collection)
     elif storage_type == 'sqlite':
         return SQLiteStorage(config.sqlite_path)
     else:  # memory или по умолчанию
