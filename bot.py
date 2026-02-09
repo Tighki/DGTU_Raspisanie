@@ -71,7 +71,13 @@ class TelegramBot:
         await self.application.updater.start_polling()
         logger.info("Бот запущен и готов к работе!")
         
-        # Ожидание остановки
+        # Бот работает до получения сигнала остановки
+        # Используем run_until_disconnected для постоянной работы
+        await self.application.updater.idle()
+        
+        # Остановка бота
+        logger.info("Остановка бота...")
         await self.application.updater.stop()
         await self.application.stop()
         await self.application.shutdown()
+        logger.info("Бот остановлен")
