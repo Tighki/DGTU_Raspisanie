@@ -34,68 +34,51 @@ class Handlers:
         await update.message.reply_text(text, reply_markup=inline_keyboard)
     
     async def login_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обработчик команды /l <логин> <пароль>"""
+        """Обработчик команды /l или /login - начинает процесс авторизации"""
         user = update.effective_user
-        args = context.args
-        
-        if not args or len(args) < 2:
-            await update.message.reply_text(localize("LoginError", {}))
-            return
-        
-        username, password = args[0], args[1]
         
         # Получаем тип университета из хранилища
         user_university = self.storage.get(str(user.id)) or ""
         
         if not user_university:
-            await update.message.reply_text(localize("LoginError", {}))
+            # Если университет не выбран, показываем выбор
+            inline_keyboard, _, _ = get_login_options()
+            text = localize("ChooseUniversity", {})
+            await update.message.reply_text(text, reply_markup=inline_keyboard)
             return
         
-        # Авторизация через API
-        try:
-            token_info = self.api.auth_user(user_university, username, password)
-            
-            if token_info.get('state') == -1:
-                await update.message.reply_text(localize("LoginWrongLoginOrPasswordError", {}))
-                return
-            
-            access_token = token_info['data']['accessToken']
-            user_id = str(token_info['data']['data']['id'])
-            
-            # Определяем тип пользователя
-            if not validate_email(username):
-                # Преподаватель
-                teacher_id = self.api.get_teacher_id(user_university, access_token, user_id)
-                storage_value = f"{user_university}{teacher_id}T"
-            else:
-                # Студент
-                group_id = self.api.get_student_group_id(user_university, access_token, user_id)
-                storage_value = f"{user_university}{group_id}"
-            
-            # Сохраняем в хранилище
-            self.storage.set(str(user.id), storage_value)
-            
-            menu = get_main_menu()
-            text = localize("LoginCompleteMessage", {"BtnLogout": "🚪 Выход"})
-            await update.message.reply_text(text, reply_markup=menu)
-            
-        except Exception as e:
-            logger.error(f"Ошибка авторизации: {e}")
-            await update.message.reply_text(localize("TryLaterError", {}))
+        # Устанавливаем состояние ожидания логина
+        self.storage.set(f"{user.id}:login_state", "waiting_login")
+        self.storage.set(f"{user.id}:login_university", user_university)
+        
+        text = localize("LoginHandler", {})
+        await update.message.reply_text(text)
     
     async def inline_tpi_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик выбора ПИ ДГТУ"""
         user = update.effective_user
         self.storage.delete(str(user.id))
         self.storage.set(str(user.id), "T")
-        await update.callback_query.edit_message_text(localize("LoginHandler", {}))
+        
+        # Устанавливаем состояние ожидания логина
+        self.storage.set(f"{user.id}:login_state", "waiting_login")
+        self.storage.set(f"{user.id}:login_university", "T")
+        
+        text = localize("LoginHandler", {})
+        await update.callback_query.edit_message_text(text)
     
     async def inline_dgty_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик выбора ДГТУ"""
         user = update.effective_user
         self.storage.delete(str(user.id))
         self.storage.set(str(user.id), "D")
-        await update.callback_query.edit_message_text(localize("LoginHandler", {}))
+        
+        # Устанавливаем состояние ожидания логина
+        self.storage.set(f"{user.id}:login_state", "waiting_login")
+        self.storage.set(f"{user.id}:login_university", "D")
+        
+        text = localize("LoginHandler", {})
+        await update.callback_query.edit_message_text(text)
     
     async def logout_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик выхода"""
@@ -128,6 +111,69 @@ class Handlers:
     async def week_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработчик расписания на неделю"""
         await self._send_timetable(update, "week")
+    
+    async def text_message_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработчик текстовых сообщений для пошаговой авторизации"""
+        user = update.effective_user
+        user_id = str(user.id)
+        text = update.message.text.strip()
+        
+        # Проверяем состояние авторизации
+        login_state = self.storage.get(f"{user_id}:login_state")
+        
+        if login_state == "waiting_login":
+            # Сохраняем логин и запрашиваем пароль
+            self.storage.set(f"{user_id}:login_username", text)
+            self.storage.set(f"{user_id}:login_state", "waiting_password")
+            
+            await update.message.reply_text(localize("LoginEnterPassword", {}))
+            
+        elif login_state == "waiting_password":
+            # Получаем сохраненные данные
+            username = self.storage.get(f"{user_id}:login_username")
+            user_university = self.storage.get(f"{user_id}:login_university")
+            password = text
+            
+            # Очищаем временные данные состояния
+            self.storage.delete(f"{user_id}:login_state")
+            self.storage.delete(f"{user_id}:login_username")
+            self.storage.delete(f"{user_id}:login_university")
+            
+            if not username or not user_university:
+                await update.message.reply_text(localize("TryLaterError", {}))
+                return
+            
+            # Авторизация через API
+            try:
+                token_info = self.api.auth_user(user_university, username, password)
+                
+                if token_info.get('state') == -1:
+                    await update.message.reply_text(localize("LoginWrongLoginOrPasswordError", {}))
+                    return
+                
+                access_token = token_info['data']['accessToken']
+                api_user_id = str(token_info['data']['data']['id'])
+                
+                # Определяем тип пользователя
+                if not validate_email(username):
+                    # Преподаватель
+                    teacher_id = self.api.get_teacher_id(user_university, access_token, api_user_id)
+                    storage_value = f"{user_university}{teacher_id}T"
+                else:
+                    # Студент
+                    group_id = self.api.get_student_group_id(user_university, access_token, api_user_id)
+                    storage_value = f"{user_university}{group_id}"
+                
+                # Сохраняем в хранилище
+                self.storage.set(user_id, storage_value)
+                
+                menu = get_main_menu()
+                text = localize("LoginCompleteMessage", {"BtnLogout": "🚪 Выход"})
+                await update.message.reply_text(text, reply_markup=menu)
+                
+            except Exception as e:
+                logger.error(f"Ошибка авторизации: {e}")
+                await update.message.reply_text(localize("TryLaterError", {}))
     
     async def _send_timetable(self, update: Update, period: str):
         """Общая функция для отправки расписания"""
