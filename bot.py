@@ -66,18 +66,26 @@ class TelegramBot:
     async def start(self):
         """Запуск бота"""
         logger.info("Запуск бота...")
-        await self.application.initialize()
-        await self.application.start()
-        await self.application.updater.start_polling()
-        logger.info("Бот запущен и готов к работе!")
-        
-        # Бот работает до получения сигнала остановки
-        # Используем run_until_disconnected для постоянной работы
-        await self.application.updater.idle()
-        
-        # Остановка бота
-        logger.info("Остановка бота...")
-        await self.application.updater.stop()
-        await self.application.stop()
-        await self.application.shutdown()
-        logger.info("Бот остановлен")
+        try:
+            await self.application.initialize()
+            await self.application.start()
+            await self.application.updater.start_polling()
+            logger.info("Бот запущен и готов к работе!")
+            
+            # Бот работает до получения сигнала остановки
+            # Используем updater.idle() для постоянной работы
+            await self.application.updater.idle()
+        except KeyboardInterrupt:
+            logger.info("Получен сигнал остановки (Ctrl+C)")
+        except Exception as e:
+            logger.error(f"Критическая ошибка: {e}", exc_info=True)
+        finally:
+            # Остановка бота
+            logger.info("Остановка бота...")
+            try:
+                await self.application.updater.stop()
+                await self.application.stop()
+                await self.application.shutdown()
+            except Exception as e:
+                logger.error(f"Ошибка при остановке: {e}")
+            logger.info("Бот остановлен")

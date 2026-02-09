@@ -15,6 +15,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+# Подавляем предупреждения о CancelledError (это нормальное поведение для updater.idle())
+logging.getLogger('telegram.ext.Application').setLevel(logging.ERROR)
+
 logger = logging.getLogger(__name__)
 
 
