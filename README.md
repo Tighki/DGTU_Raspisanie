@@ -40,7 +40,7 @@ python main.py
 | Переменная | Описание | Обязательна | По умолчанию |
 |------------|----------|-------------|--------------|
 | `BOT_TOKEN` | Токен Telegram-бота от @BotFather | Да | - |
-| `MONGO_URI` | URI подключения к MongoDB | Нет | `mongodb://mongo:3zzc8t1bephxkkvn@192.168.1.182:27019/` |
+| `MONGO_URI` | URI подключения к MongoDB | Нет | `mongodb://*****:*******@***.***.*.***:*****/` |
 | `MONGO_DB` | Название базы данных | Нет | `ras` |
 | `MONGO_COLLECTION` | Название коллекции | Нет | `sessions` |
 
