@@ -23,10 +23,6 @@ COPY --from=builder /root/.local /root/.local
 # Копирование кода приложения
 COPY . .
 
-# Создание директории для данных SQLite
-RUN mkdir -p /app/data && \
-    chmod 755 /app/data
-
 # Добавление локальных пакетов в PATH
 ENV PATH=/root/.local/bin:$PATH
 
