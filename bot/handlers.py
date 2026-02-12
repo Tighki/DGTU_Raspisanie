@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from collections import defaultdict
 import re
+from pymongo import MongoClient, UpdateOne
 from telegram import Update
 from telegram.ext import ContextTypes
 from bot.api.timetable import TimetableAPI
@@ -20,7 +21,6 @@ LOGIN_MENU = get_login_menu()
 class Handlers:
     def __init__(self, config: Config):
         try:
-            from pymongo import MongoClient  # type: ignore
             self.client = MongoClient(config.mongo_uri)
             self.client.admin.command("ping")
             self.collection = self.client[config.mongo_db][config.mongo_collection]
@@ -47,7 +47,6 @@ class Handlers:
         )
     
     def _set_many(self, data: dict[str, str]) -> None:
-        from pymongo import UpdateOne  # type: ignore
         operations = [
             UpdateOne({"_id": key}, {"$set": {"value": value}}, upsert=True)
             for key, value in data.items()
